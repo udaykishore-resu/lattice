@@ -1,0 +1,10 @@
+.git
+**/target
+.bsp
+.metals
+.bloop
+infra
+docs
+manifests
+scripts
+*.md
