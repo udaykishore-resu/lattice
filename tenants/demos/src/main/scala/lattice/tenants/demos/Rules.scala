@@ -12,7 +12,12 @@ object RiskRules:
     if ratio > 0.5 then reasons += "requested amount exceeds 50% of verified income"
     if i.confidence < 0.6 then reasons += "low income verification confidence"
     val riskScore = ((1000 - r.score) / 4) + (r.delinquencies * 30) + (ratio * 100).toInt
-    RiskAssessment(approved = reasons.isEmpty, riskScore = riskScore, reasons = reasons.toList, requestedAmount = a.requestedAmount)
+    RiskAssessment(
+      approved = reasons.isEmpty,
+      riskScore = riskScore,
+      reasons = reasons.toList,
+      requestedAmount = a.requestedAmount
+    )
 
 object OfferEngine:
   def build(r: RiskAssessment): Offer =

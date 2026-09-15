@@ -5,8 +5,8 @@ import lattice.core.*
 
 /** Local/test store. Not for production — state dies with the process. */
 final class MemoryExecutionStore(
-  records: Ref[Map[(String, String), ExecutionRecord]],
-  claims: Ref[Map[(String, String, String), String]]
+    records: Ref[Map[(String, String), ExecutionRecord]],
+    claims: Ref[Map[(String, String, String), String]]
 ) extends ExecutionStore:
 
   def save(record: ExecutionRecord): IO[LatticeError, Unit] =
@@ -25,7 +25,12 @@ final class MemoryExecutionStore(
         .map(r => ExecutionSummary(r.executionId, r.graph, r.graphVersion, r.status, r.startedAt, r.durationMs))
     )
 
-  def claimIdempotency(tenant: String, graph: String, key: String, executionId: String): IO[LatticeError, Option[String]] =
+  def claimIdempotency(
+      tenant: String,
+      graph: String,
+      key: String,
+      executionId: String
+  ): IO[LatticeError, Option[String]] =
     claims.modify { m =>
       m.get((tenant, graph, key)) match
         case Some(existing) => (Some(existing), m)

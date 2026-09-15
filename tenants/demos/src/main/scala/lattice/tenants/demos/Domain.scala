@@ -14,7 +14,8 @@ final case class RiskAssessment(approved: Boolean, riskScore: Int, reasons: List
 final case class Offer(creditLimit: Long, apr: Double) derives JsonCodec
 
 /** Terminal output of credit-decision. `decision` is what the Step Functions Choice state routes on. */
-final case class Decision(decision: String, riskScore: Int, reasons: List[String], offer: Option[Offer]) derives JsonCodec
+final case class Decision(decision: String, riskScore: Int, reasons: List[String], offer: Option[Offer])
+    derives JsonCodec
 
 final case class FulfillmentSeed(applicant: Applicant, decision: Decision) derives JsonCodec
 

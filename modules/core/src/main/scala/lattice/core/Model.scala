@@ -8,9 +8,9 @@ import zio.json.ast.Json
 opaque type NodeId = String
 
 object NodeId:
-  def apply(value: String): NodeId = value
+  def apply(value: String): NodeId         = value
   extension (id: NodeId) def value: String = id
-  given JsonCodec[NodeId] = summon[JsonCodec[String]]
+  given JsonCodec[NodeId]                  = summon[JsonCodec[String]]
 
 /** Typed handle to a node's output. Only the DSL creates these, which is what keeps `Inputs#apply` sound. */
 final case class NodeRef[A](id: NodeId)
@@ -43,17 +43,16 @@ final case class Node(meta: NodeMeta, run: Inputs => IO[LatticeError, NodeOutcom
 final case class GraphId(tenant: String, name: String):
   def key: String = s"$tenant/$name"
 
-/**
- * A decision graph as a value. `nodes` is the DAG, `order` is declaration order (used for deterministic
- * levelization), `terminal` is the node whose output is the graph's result.
- */
+/** A decision graph as a value. `nodes` is the DAG, `order` is declaration order (used for deterministic levelization),
+  * `terminal` is the node whose output is the graph's result.
+  */
 final case class Graph(
-  id: GraphId,
-  version: String,
-  description: String,
-  nodes: Map[NodeId, Node],
-  order: List[NodeId],
-  terminal: NodeId,
-  timeout: Duration,
-  encodeResult: Any => Json
+    id: GraphId,
+    version: String,
+    description: String,
+    nodes: Map[NodeId, Node],
+    order: List[NodeId],
+    terminal: NodeId,
+    timeout: Duration,
+    encodeResult: Any => Json
 )

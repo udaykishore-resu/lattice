@@ -9,11 +9,10 @@ trait BureauClient:
 trait IncomeClient:
   def verify(applicantId: String, statedIncome: Long): IO[LatticeError, IncomeVerification]
 
-/**
- * Deterministic simulations standing in for real integrations. Replace these layers with HTTP-backed
- * implementations; the graph does not change. Applicant ids starting with "bad-" produce a thin, delinquent
- * file; ids starting with "slow-" add latency so timeout/retry policies can be exercised end to end.
- */
+/** Deterministic simulations standing in for real integrations. Replace these layers with HTTP-backed implementations;
+  * the graph does not change. Applicant ids starting with "bad-" produce a thin, delinquent file; ids starting with
+  * "slow-" add latency so timeout/retry policies can be exercised end to end.
+  */
 final class SimulatedBureau(latency: Duration) extends BureauClient:
   def pull(applicantId: String): IO[LatticeError, BureauReport] =
     val report =

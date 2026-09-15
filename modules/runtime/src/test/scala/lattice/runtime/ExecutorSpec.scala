@@ -5,6 +5,7 @@ import zio.json.ast.Json
 import zio.test.*
 import lattice.core.*
 import lattice.core.GraphDsl.*
+import lattice.runtime.Executor
 
 object ExecutorSpec extends ZIOSpecDefault:
 
@@ -18,14 +19,14 @@ object ExecutorSpec extends ZIOSpecDefault:
     test("idempotency key replays the stored execution instead of re-running") {
       for
         counter <- Ref.make(0)
-        layer    = ZLayer.succeed(TenantGraphs(List(counting(counter)))) >>> GraphCatalog.live
-        result  <- (for
-                     ex <- ZIO.service[Executor]
-                     r1 <- ex.execute("t", "counted", Json.Null, Some("k1"), None)
-                     r2 <- ex.execute("t", "counted", Json.Null, Some("k1"), None)
-                     r3 <- ex.execute("t", "counted", Json.Null, Some("k2"), None)
-                     n  <- counter.get
-                   yield (r1, r2, r3, n)).provide(layer, TestStore.layer, Executor.live)
+        layer = ZLayer.succeed(TenantGraphs(List(counting(counter)))) >>> GraphCatalog.live
+        result <- (for
+          ex <- ZIO.service[Executor]
+          r1 <- ex.execute("t", "counted", Json.Null, Some("k1"), None)
+          r2 <- ex.execute("t", "counted", Json.Null, Some("k1"), None)
+          r3 <- ex.execute("t", "counted", Json.Null, Some("k2"), None)
+          n  <- counter.get
+        yield (r1, r2, r3, n)).provide(layer, TestStore.layer, Executor.live)
         (r1, r2, r3, n) = result
       yield assertTrue(r1.executionId == r2.executionId, r1.executionId != r3.executionId, n == 2)
     },
@@ -47,10 +48,10 @@ object ExecutorSpec extends ZIOSpecDefault:
 object TestStore:
   val layer: ULayer[ExecutionStore] = ZLayer.fromZIO {
     for
-      recs  <- Ref.make(Map.empty[(String, String), ExecutionRecord])
-      keys  <- Ref.make(Map.empty[(String, String, String), String])
+      recs <- Ref.make(Map.empty[(String, String), ExecutionRecord])
+      keys <- Ref.make(Map.empty[(String, String, String), String])
     yield new ExecutionStore:
-      def save(r: ExecutionRecord) = recs.update(_ + ((r.tenant, r.executionId) -> r))
+      def save(r: ExecutionRecord)        = recs.update(_ + ((r.tenant, r.executionId) -> r))
       def get(tenant: String, id: String) = recs.get.map(_.get((tenant, id)))
       def listByGraph(tenant: String, graph: String, limit: Int) =
         recs.get.map(

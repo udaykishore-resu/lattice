@@ -8,12 +8,10 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient
 import software.amazon.awssdk.services.dynamodb.model.*
 import lattice.core.*
 
-/**
- * Single-table layout:
- *   pk = TENANT#<tenant>   sk = EXEC#<executionId>            one item per execution (body = full JSON)
- *   pk = TENANT#<tenant>   sk = IDEMP#<graph>#<key>           idempotency claim (conditional put)
- *   gsi1: gsi1pk = GRAPH#<tenant>#<graph>, gsi1sk = <startedAt zero-padded>#<executionId>
- */
+/** Single-table layout: pk = TENANT#<tenant> sk = EXEC#<executionId> one item per execution (body = full JSON) pk =
+  * TENANT#<tenant> sk = IDEMP#<graph>#<key> idempotency claim (conditional put) gsi1: gsi1pk = GRAPH#<tenant>#<graph>,
+  * gsi1sk = <startedAt zero-padded>#<executionId>
+  */
 final class DynamoExecutionStore(client: DynamoDbAsyncClient, table: String) extends ExecutionStore:
   import DynamoExecutionStore.*
 
@@ -79,22 +77,42 @@ final class DynamoExecutionStore(client: DynamoDbAsyncClient, table: String) ext
       }
     }
 
-  def claimIdempotency(tenant: String, graph: String, key: String, executionId: String): IO[LatticeError, Option[String]] =
+  def claimIdempotency(
+      tenant: String,
+      graph: String,
+      key: String,
+      executionId: String
+  ): IO[LatticeError, Option[String]] =
     val pk = s(s"TENANT#$tenant")
     val sk = s(s"IDEMP#$graph#$key")
     val put = PutItemRequest
       .builder()
       .tableName(table)
-      .item(Map("pk" -> pk, "sk" -> sk, "executionId" -> s(executionId), "createdAt" -> n(java.lang.System.currentTimeMillis())).asJava)
+      .item(
+        Map(
+          "pk"          -> pk,
+          "sk"          -> sk,
+          "executionId" -> s(executionId),
+          "createdAt"   -> n(java.lang.System.currentTimeMillis())
+        ).asJava
+      )
       .conditionExpression("attribute_not_exists(pk)")
       .build()
     ZIO
       .fromCompletableFuture(client.putItem(put))
       .as(Option.empty[String])
-      .catchSome {
-        case Conditional(_) =>
-          io(client.getItem(GetItemRequest.builder().tableName(table).key(Map("pk" -> pk, "sk" -> sk).asJava).consistentRead(true).build()))
-            .map(r => Option(r.item()).filter(!_.isEmpty).map(_.get("executionId").s()))
+      .catchSome { case Conditional(_) =>
+        io(
+          client.getItem(
+            GetItemRequest
+              .builder()
+              .tableName(table)
+              .key(Map("pk" -> pk, "sk" -> sk).asJava)
+              .consistentRead(true)
+              .build()
+          )
+        )
+          .map(r => Option(r.item()).filter(!_.isEmpty).map(_.get("executionId").s()))
       }
       .mapError {
         case e: LatticeError => e
@@ -117,10 +135,9 @@ object DynamoExecutionStore:
       case c: ConditionalCheckFailedException => Some(c)
       case _                                  => None
 
-  /**
-   * Region and credentials come from the default provider chain. For local development the SDK honours
-   * AWS_ENDPOINT_URL_DYNAMODB (e.g. http://localhost:8000 for dynamodb-local).
-   */
+  /** Region and credentials come from the default provider chain. For local development the SDK honours
+    * AWS_ENDPOINT_URL_DYNAMODB (e.g. http://localhost:8000 for dynamodb-local).
+    */
   def live(table: String): ZLayer[Any, Throwable, ExecutionStore] =
     ZLayer.scoped {
       ZIO

@@ -22,15 +22,17 @@ object Main extends ZIOAppDefault:
   def run: ZIO[Any, Throwable, Unit] =
     for
       cfg <- AppConfig.load
-      _   <- ZIO.logInfo(s"lattice starting port=${cfg.port} store=${cfg.store} table=${cfg.table} auth=${cfg.apiKey.isDefined}")
-      _   <- Server
-               .serve(Routes.routes(cfg.apiKey))
-               .provide(
-                 Server.defaultWithPort(cfg.port),
-                 storeLayer(cfg),
-                 Executor.live,
-                 GraphCatalog.live,
-                 DemoGraphs.layer,
-                 Clients.simulated(cfg.simulatedLatency)
-               )
+      _ <- ZIO.logInfo(
+        s"lattice starting port=${cfg.port} store=${cfg.store} table=${cfg.table} auth=${cfg.apiKey.isDefined}"
+      )
+      _ <- Server
+        .serve(Routes.routes(cfg.apiKey))
+        .provide(
+          Server.defaultWithPort(cfg.port),
+          storeLayer(cfg),
+          Executor.live,
+          GraphCatalog.live,
+          DemoGraphs.layer,
+          Clients.simulated(cfg.simulatedLatency)
+        )
     yield ()

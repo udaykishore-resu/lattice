@@ -6,25 +6,25 @@ import zio.json.*
 import LatticeError.InvalidGraph
 
 final case class NodeManifest(
-  id: String,
-  kind: NodeKind,
-  deps: List[String],
-  description: String,
-  timeoutMs: Long,
-  retries: Int,
-  backoffMs: Long
+    id: String,
+    kind: NodeKind,
+    deps: List[String],
+    description: String,
+    timeoutMs: Long,
+    retries: Int,
+    backoffMs: Long
 ) derives JsonCodec
 
 /** Build-time, runtime-free description of a graph. This is what the catalog stores and searches. */
 final case class Manifest(
-  tenant: String,
-  name: String,
-  version: String,
-  description: String,
-  terminal: String,
-  timeoutMs: Long,
-  nodes: List[NodeManifest],
-  levels: List[List[String]]
+    tenant: String,
+    name: String,
+    version: String,
+    description: String,
+    terminal: String,
+    timeoutMs: Long,
+    nodes: List[NodeManifest],
+    levels: List[List[String]]
 ) derives JsonCodec:
   def key: String = s"$tenant/$name"
 
@@ -35,7 +35,11 @@ object GraphPlanner:
     for
       _ <- Either.cond(g.nodes.nonEmpty, (), InvalidGraph("graph has no nodes"))
       _ <- Either.cond(g.order.toSet == g.nodes.keySet, (), InvalidGraph("declaration order does not match node set"))
-      _ <- Either.cond(g.nodes.contains(g.terminal), (), InvalidGraph(s"terminal node '${g.terminal.value}' is not defined"))
+      _ <- Either.cond(
+        g.nodes.contains(g.terminal),
+        (),
+        InvalidGraph(s"terminal node '${g.terminal.value}' is not defined")
+      )
       _ <- levels(g)
     yield ()
 
@@ -78,7 +82,7 @@ object GraphPlanner:
 
   private def kahn(g: Graph): Either[InvalidGraph, List[List[NodeId]]] =
     val position: Map[NodeId, Int] = g.order.zipWithIndex.toMap
-    val indegree = mutable.Map.from(g.order.map(id => id -> g.nodes(id).meta.deps.distinct.size))
+    val indegree                   = mutable.Map.from(g.order.map(id => id -> g.nodes(id).meta.deps.distinct.size))
     val dependents: Map[NodeId, List[NodeId]] =
       g.order.flatMap(id => g.nodes(id).meta.deps.distinct.map(d => d -> id)).groupMap(_._1)(_._2)
 

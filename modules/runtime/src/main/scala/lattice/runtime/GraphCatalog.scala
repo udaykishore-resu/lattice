@@ -9,10 +9,9 @@ final case class TenantGraphs(graphs: List[Graph])
 
 final case class NodeHit(tenant: String, graph: String, graphVersion: String, node: NodeManifest) derives JsonCodec
 
-/**
- * Read-only view over registered graphs and their manifests. Manifests are computed once at startup and are
- * also exported at build time (see lattice.app.ExportManifests), so topology is queryable without a JVM.
- */
+/** Read-only view over registered graphs and their manifests. Manifests are computed once at startup and are also
+  * exported at build time (see lattice.app.ExportManifests), so topology is queryable without a JVM.
+  */
 trait GraphCatalog:
   def get(tenant: String, name: String): UIO[Option[Graph]]
   def list: UIO[List[Manifest]]

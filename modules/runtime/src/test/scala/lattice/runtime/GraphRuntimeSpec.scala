@@ -65,18 +65,18 @@ object GraphRuntimeSpec extends ZIOSpecDefault:
     test("retries per policy then succeeds") {
       for
         counter <- Ref.make(0)
-        g        = graph("t", "flaky") {
-                     val a = fetch[Int]("flaky", policy = Policy(1.second, 2, 10.millis)) { _ =>
-                       counter
-                         .updateAndGet(_ + 1)
-                         .flatMap(n => if n < 3 then ZIO.fail(LatticeError.Upstream("svc", "boom")) else ZIO.succeed(n))
-                     }
-                     terminal(a)
-                   }
-        fiber   <- GraphRuntime.execute(g, Json.Null, "e5", None, None).fork
-        _       <- TestClock.adjust(1.second).repeatN(4)
-        rec     <- fiber.join
-        n       <- counter.get
+        g = graph("t", "flaky") {
+          val a = fetch[Int]("flaky", policy = Policy(1.second, 2, 10.millis)) { _ =>
+            counter
+              .updateAndGet(_ + 1)
+              .flatMap(n => if n < 3 then ZIO.fail(LatticeError.Upstream("svc", "boom")) else ZIO.succeed(n))
+          }
+          terminal(a)
+        }
+        fiber <- GraphRuntime.execute(g, Json.Null, "e5", None, None).fork
+        _     <- TestClock.adjust(1.second).repeatN(4)
+        rec   <- fiber.join
+        n     <- counter.get
       yield assertTrue(rec.status == ExecutionStatus.Succeeded, n == 3)
     },
     test("siblings in a level run in parallel") {

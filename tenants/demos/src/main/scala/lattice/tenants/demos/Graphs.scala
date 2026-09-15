@@ -10,21 +10,30 @@ import lattice.runtime.TenantGraphs
 object DemoGraphs:
 
   def creditDecision(bureau: BureauClient, income: IncomeClient): Graph =
-    graph("demos", "credit-decision", version = "1.2.0", description = "Card acquisition credit decision", timeout = 20.seconds) {
+    graph(
+      "demos",
+      "credit-decision",
+      version = "1.2.0",
+      description = "Card acquisition credit decision",
+      timeout = 20.seconds
+    ) {
       val applicant = fetch("applicant", "Parse applicant from seed") { seed =>
         ZIO.fromEither(seed.as[Applicant]).mapError(BadSeed(_))
       }
-      val report = compute("bureau-report", "Pull credit bureau file", Policy(3.seconds, 2, 100.millis))(applicant) { a =>
-        bureau.pull(a.applicantId)
+      val report = compute("bureau-report", "Pull credit bureau file", Policy(3.seconds, 2, 100.millis))(applicant) {
+        a =>
+          bureau.pull(a.applicantId)
       }
-      val verified = compute("income-verification", "Verify stated income", Policy(3.seconds, 1, 200.millis))(applicant) { a =>
-        income.verify(a.applicantId, a.statedIncome)
-      }
+      val verified =
+        compute("income-verification", "Verify stated income", Policy(3.seconds, 1, 200.millis))(applicant) { a =>
+          income.verify(a.applicantId, a.statedIncome)
+        }
       val risk = compute3("risk-assessment", "Apply risk rules")(applicant, report, verified) { (a, r, i) =>
         ZIO.succeed(RiskRules.assess(a, r, i))
       }
-      val offer = computeIf("offer", "Build an offer when approved")(risk)((r: RiskAssessment) => r.approved)(risk) { r =>
-        ZIO.succeed(OfferEngine.build(r))
+      val offer = computeIf("offer", "Build an offer when approved")(risk)((r: RiskAssessment) => r.approved)(risk) {
+        r =>
+          ZIO.succeed(OfferEngine.build(r))
       }
       val decision = compute2("decision", "Assemble the decision")(risk, offer) { (r, o) =>
         ZIO.succeed(Decision(if r.approved then "APPROVED" else "DECLINED", r.riskScore, r.reasons, o))
